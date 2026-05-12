@@ -5,6 +5,7 @@ volumes:
   pip_cache:
   site_packages:
 
+
 services:
 
   nginx:
@@ -18,8 +19,9 @@ services:
       ckan:
         condition: service_healthy
     ports:
+      - "0.0.0.0:${NGINX_PORT_HOST}:${NGINX_PORT}"
       - "0.0.0.0:${NGINX_SSLPORT_HOST}:${NGINX_SSLPORT}"
-    
+
   ckan:
     build:
       context: ckan/
@@ -46,19 +48,24 @@ services:
       - site_packages:/usr/lib/python3.10/site-packages
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:5000/api/action/status_show"]
+      test: [ "CMD", "wget", "-qO", "/dev/null", "http://localhost:5000/api/action/status_show" ]
       interval: 60s
       timeout: 10s
       retries: 3
-    
+
   datapusher:
     networks:
       - ckannet
       - dbnet
     image: ckan/ckan-base-datapusher:${DATAPUSHER_VERSION}
     restart: unless-stopped
+    extra_hosts:
+      - "satudata.konawekab.go.id:host-gateway"
+    environment:
+      - SSL_VERIFY=False
+      - UWSGI_LOCK_ENGINE=ipcsem
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8800"]
+      test: [ "CMD", "wget", "-qO", "/dev/null", "http://localhost:8800" ]
       interval: 60s
       timeout: 10s
       retries: 3
@@ -82,8 +89,8 @@ services:
       - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
-     
+      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}" ]
+
   solr:
     networks:
       - solrnet
@@ -92,7 +99,7 @@ services:
       - solr_data:/var/solr
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8983/solr/"]
+      test: [ "CMD", "wget", "-qO", "/dev/null", "http://localhost:8983/solr/" ]
 
   redis:
     image: redis:${REDIS_VERSION}
@@ -100,8 +107,8 @@ services:
       - redisnet
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-e", "QUIT"]
-    
+      test: [ "CMD", "redis-cli", "-e", "QUIT" ]
+
 networks:
   webnet:
   ckannet:

@@ -100,13 +100,14 @@ def init_db():
         subprocess.check_output(db_command, stderr=subprocess.STDOUT)
         print("[prerun] Initializing or upgrading db - end")
     except subprocess.CalledProcessError as e:
-        if "OperationalError" in e.output:
-            print(e.output)
+        output_str = e.output.decode("utf-8", errors="ignore") if isinstance(e.output, bytes) else str(e.output)
+        if "OperationalError" in output_str:
+            print(output_str)
             print("[prerun] Database not ready, waiting a bit before exit...")
             time.sleep(5)
             sys.exit(1)
         else:
-            print(e.output)
+            print(output_str)
             raise e
 
 
@@ -144,13 +145,14 @@ def init_datastore_db():
         print(str(e))
 
     except subprocess.CalledProcessError as e:
-        if "OperationalError" in e.output:
-            print(e.output)
+        output_str = e.output.decode("utf-8", errors="ignore") if isinstance(e.output, bytes) else str(e.output)
+        if "OperationalError" in output_str:
+            print(output_str)
             print("[prerun] Database not ready, waiting a bit before exit...")
             time.sleep(5)
             sys.exit(1)
         else:
-            print(e.output)
+            print(output_str)
             raise e
     finally:
         cursor.close()
@@ -168,10 +170,13 @@ def create_sysadmin():
         # Check if user exists
         command = ["ckan", "-c", ckan_ini, "user", "show", name]
 
-        out = subprocess.check_output(command)
-        if b"User:None" not in re.sub(b"\s", b"", out):
-            print("[prerun] Sysadmin user exists, skipping creation")
-            return
+        try:
+            out = subprocess.check_output(command, stderr=subprocess.STDOUT)
+            if b"User:None" not in re.sub(b"\s", b"", out):
+                print("[prerun] Sysadmin user exists, skipping creation")
+                return
+        except subprocess.CalledProcessError as e:
+            print("[prerun] Sysadmin user not found, proceeding with creation...")
 
         # Create user
         command = [
